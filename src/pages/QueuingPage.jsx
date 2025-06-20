@@ -1,26 +1,47 @@
-import React from "react";
+import React, { use } from "react";
 import Card from "../components/Card";
 import Header from "../components/Header";
+import { useState } from "react";
 
 const QueuingPage = () => {
-  const waitingData = [23, 34, 12, 42, 12, 54, 65, 32, 65];
+  function generatePriority() {
+    var customer = ["Priority Customer", "Regular Customer"];
+    var randomIndex = Math.floor(Math.random() * customer.length);
+    var randomNumber = Math.floor(Math.random() * 100);
+    setPriority((prevArray) => [
+      ...prevArray,
+      customer[randomIndex] + " : " + randomNumber,
+    ]);
+    return customer[randomIndex] + " " + randomNumber;
+  }
+  function deletePriority() {
+    setPriority([]);
+  }
 
-  const waitingList = waitingData.map((num, index) => (
-    <p key={index} style={{ fontSize: "1.1rem", marginBottom: "6px" }}>
-      #{num}
-    </p>
-  ));
+  function callCustomer() {
+    const newCustomer = priority.slice(1);
+    var randomIndex;
+    setPriority(newCustomer);
+    var counter = ["Counter 1", "Counter 2", "Priority Number"];
+    if (newCustomer === "Priority Customer") {
+      console.log("Priority: " + priority);
+      counter[2];
+    } else if (counter[2] === 0) {
+      console.log("Im 0 and 1 " + priority);
+      randomIndex = Math.floor(Math.random() * counter.length);
+      return randomIndex;
+    } else {
+      console.log("Im hereee " + priority);
+      randomIndex = Math.floor(Math.random() * counter.length);
+      return randomIndex;
+    }
+    return "Pop:" + priority;
+  }
 
-  const calledCounter1 = [21, 20, 19];
-  const calledCounter2 = [18, 17, 16];
-  const calledPriority = [5, 4];
-
-  const renderCalledNumbers = (list) =>
-    list.map((num, index) => (
-      <p key={index} style={{ fontSize: "1.1rem", marginBottom: "6px" }}>
-        #{num}
-      </p>
-    ));
+  const [priority, setPriority] = useState(() => {
+    return [generatePriority()];
+  });
+  const [counter, setCounter] = useState([]);
 
   return (
     <div
@@ -58,7 +79,6 @@ const QueuingPage = () => {
           gap: "30px",
         }}
       >
-        {/* Main Grid Container */}
         <div
           style={{
             display: "flex",
@@ -68,14 +88,13 @@ const QueuingPage = () => {
             flex: 1,
           }}
         >
-          {/* Top Row */}
           <div
             className="top-row"
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(3, 1fr)",
               gap: "20px",
-              height: "160px"
+              height: "160px",
             }}
           >
             <Card
@@ -92,7 +111,6 @@ const QueuingPage = () => {
             />
           </div>
 
-          {/* Bottom Row */}
           <div
             className="bottom-row"
             style={{
@@ -101,25 +119,85 @@ const QueuingPage = () => {
               gap: "20px",
             }}
           >
-            <Card
-              title="Counter 1 - Called"
-              content={renderCalledNumbers(calledCounter1)}
-            />
-            <Card
-              title="Counter 2 - Called"
-              content={renderCalledNumbers(calledCounter2)}
-            />
-            <Card
-              title="Priority - Called"
-              content={renderCalledNumbers(calledPriority)}
-            />
+            <Card title="Counter 1 - Called" content="" />
+            <Card title="Counter 2 - Called" content="" />
+            <Card title="Priority - Called" content="" />
           </div>
         </div>
 
-        {/* Waiting List on the Right */}
         <div style={{ minWidth: "250px" }}>
-          <Card title="Waiting List" content={waitingList} />
+          <Card
+            title="Waiting List"
+            content={
+              <ul>
+                {priority.map((item, index) => (
+                  <li key={index} style={{ marginBottom: "10px" }}>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            }
+          ></Card>
         </div>
+      </div>
+      <div
+        className="button"
+        style={{ textAlign: "center", marginTop: "10px" }}
+      >
+        <button
+          onClick={() => {
+            console.log(generatePriority());
+          }}
+          className="add-customer-btn"
+          style={{
+            width: "200px",
+            marginRight: "20px",
+            backgroundColor: "#FFF287",
+            color: "#8A0000",
+            border: "none",
+            padding: "10px 20px",
+            borderRadius: "5px",
+            cursor: "pointer",
+            fontSize: "1rem",
+          }}
+        >
+          Add Customer
+        </button>
+        <button
+          onClick={() => {
+            console.log(callCustomer());
+          }}
+          className="call-next-btn"
+          style={{
+            width: "200px",
+            backgroundColor: "#FFF287",
+            color: "#8A0000",
+            border: "none",
+            padding: "10px 20px",
+            borderRadius: "5px",
+            cursor: "pointer",
+            fontSize: "1rem",
+          }}
+        >
+          Call Next Customer
+        </button>
+        <button
+          onClick={deletePriority}
+          className="clear-queue-btn"
+          style={{
+            width: "200px",
+            backgroundColor: "#C83F12",
+            color: "#fff",
+            border: "none",
+            padding: "10px 20px",
+            borderRadius: "5px",
+            cursor: "pointer",
+            fontSize: "1rem",
+            marginLeft: "20px",
+          }}
+        >
+          Delete Queue
+        </button>
       </div>
     </div>
   );

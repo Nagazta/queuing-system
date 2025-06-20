@@ -13,7 +13,7 @@ const LandingPage = () => {
         style={{
           fontFamily: "Segoe UI, sans-serif",
           color: "#FFF287",
-          marginBottom: "900px",
+          marginBottom: "800px",
         }}
       >
         <div
@@ -31,7 +31,7 @@ const LandingPage = () => {
             alignItems: "center",
             justifyContent: "center",
             textAlign: "center",
-            paddingTop: "200px",
+            paddingTop: "140px",
           }}
         >
           <Header />
@@ -88,13 +88,9 @@ const LandingPage = () => {
               cursor: "pointer",
               transition: "0.3s ease",
             }}
-            onMouseOver={(e) =>
-              (e.target.style.backgroundColor = "#a93210")
-            }
-            onMouseOut={(e) =>
-              (e.target.style.backgroundColor = "#C83F12")
-            }
-            onClick={()=> navigate("/queue")}
+            onMouseOver={(e) => (e.target.style.backgroundColor = "#a93210")}
+            onMouseOut={(e) => (e.target.style.backgroundColor = "#C83F12")}
+            onClick={() => navigate("/queue")}
           >
             Join Queue
           </button>
