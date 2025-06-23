@@ -10,7 +10,7 @@ export default function({title, content, children, style}) {
         minHeight: '100px',
         padding: '16px',
         textAlign: 'Center',
-        backgroundColor: '#C83F12',
+        backgroundColor: '#3B060A',
         color : '#FFF287',
         ...style,
     }}>

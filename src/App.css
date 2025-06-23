@@ -4,3 +4,20 @@ html, body, #root {
   padding: 0;
   width: 100% !important;
 }
+.scrollable-waiting-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.scrollable-waiting-list::-webkit-scrollbar-track {
+  background: #8a0000;
+}
+
+.scrollable-waiting-list::-webkit-scrollbar-thumb {
+  background-color: #FFF287; 
+  border-radius: 10px;
+  border: 2px solid #8a0000;
+}
+
+.scrollable-waiting-list::-webkit-scrollbar-thumb:hover {
+  background-color: #ffe95c;
+}
