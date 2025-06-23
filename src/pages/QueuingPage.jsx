@@ -7,94 +7,211 @@ import "../App.css";
 
 const QueuingPage = () => {
   const [waitingList, setWaitingList] = useState([]);
-  
   const [counter1, setCounter1] = useState({ queue: [], currentCustomer: null, isProcessing: false });
   const [counter2, setCounter2] = useState({ queue: [], currentCustomer: null, isProcessing: false });
   const [priorityCounter, setPriorityCounter] = useState({ queue: [], currentCustomer: null, isProcessing: false });
 
-  const SERVICE_TIME = 10000; 
+  const SERVICE_TIME = 10000;
 
-const processNextCustomer = useCallback((counterType, setCounter) => {
-  setCounter(prev => {
-    if (prev.isProcessing || prev.queue.length === 0) return prev;
+  const rebalanceQueues = useCallback(() => {
+   const moveCustomersToPriority = () => {
+      const priorityHasPriorityCustomers =
+        priorityCounter.queue.some(c => c.type === "Priority Customer") ||
+        priorityCounter.currentCustomer?.type === "Priority Customer";
 
-    const [nextCustomer, ...remainingQueue] = prev.queue;
+      if (priorityHasPriorityCustomers) return;
+
+      const regulars = [
+        ...counter1.queue.filter(c => c.type === "Regular Customer"),
+        ...counter2.queue.filter(c => c.type === "Regular Customer"),
+        ...priorityCounter.queue.filter(c => c.type === "Regular Customer")
+      ];
+
+      const chunkSize = Math.ceil(regulars.length / 3);
+      const toPriority = regulars.slice(0, chunkSize);
+      const toCounter1 = regulars.slice(chunkSize, chunkSize * 2);
+      const toCounter2 = regulars.slice(chunkSize * 2);
+
+      setCounter1(prev => ({
+        ...prev,
+        queue: [...prev.queue.filter(c => c.type === "Priority Customer"), ...toCounter1]
+      }));
+
+      setCounter2(prev => ({
+        ...prev,
+        queue: [...prev.queue.filter(c => c.type === "Priority Customer"), ...toCounter2]
+      }));
+
+      setPriorityCounter(prev => ({
+        ...prev,
+        queue: [...prev.queue.filter(c => c.type === "Priority Customer"), ...toPriority]
+      }));
+  };
+
+
+    setPriorityCounter(prevPriority => {
+      const priorityCustomers = prevPriority.queue.filter(c => c.type === "Priority Customer");
+      const regularCustomers = prevPriority.queue.filter(c => c.type === "Regular Customer");
+
+      if (regularCustomers.length > 0 && priorityCustomers.length === 0 && !prevPriority.isProcessing) {
+        setCounter1(prev1 => {
+          setCounter2(prev2 => {
+            const mid = Math.ceil(regularCustomers.length / 2);
+            const toCounter1 = regularCustomers.slice(0, mid);
+            const toCounter2 = regularCustomers.slice(mid);
+
+            setCounter1(current => ({
+              ...current,
+              queue: [...current.queue, ...toCounter1]
+            }));
+
+            return {
+              ...prev2,
+              queue: [...prev2.queue, ...toCounter2]
+            };
+          });
+          return prev1;
+        });
+
+        return {
+          ...prevPriority,
+          queue: []
+        };
+      }
+
+      return prevPriority;
+    });
 
     setTimeout(() => {
-      setCounter(current => {
-        const updated = {
-          ...current,
-          currentCustomer: null,
-          isProcessing: false
-        };
+      moveCustomersToPriority();
+    }, 100);
 
-        if (counterType === 'priority' && updated.queue.length === 0) {
-          setTimeout(() => {
-            rebalanceQueues();
-          }, 100);
+    setTimeout(() => {
+      setCounter1(prev1 => {
+        setCounter2(prev2 => {
+          const total1 = prev1.queue.length + (prev1.isProcessing ? 1 : 0);
+          const total2 = prev2.queue.length + (prev2.isProcessing ? 1 : 0);
+
+          if (Math.abs(total1 - total2) > 1) {
+            const allRegularCustomers = [
+              ...prev1.queue.filter(c => c.type === "Regular Customer"),
+              ...prev2.queue.filter(c => c.type === "Regular Customer")
+            ];
+
+            if (allRegularCustomers.length > 0) {
+              const mid = Math.ceil(allRegularCustomers.length / 2);
+              const queue1Regular = allRegularCustomers.slice(0, mid);
+              const queue2Regular = allRegularCustomers.slice(mid);
+
+              const queue1Priority = prev1.queue.filter(c => c.type === "Priority Customer");
+              const queue2Priority = prev2.queue.filter(c => c.type === "Priority Customer");
+
+              setCounter1(current => ({
+                ...current,
+                queue: [...queue1Priority, ...queue1Regular]
+              }));
+
+              return {
+                ...prev2,
+                queue: [...queue2Priority, ...queue2Regular]
+              };
+            }
+          }
+
+          return prev2;
+        });
+        return prev1;
+      });
+    }, 200);
+  }, [counter1.queue, counter1.isProcessing, counter2.queue, counter2.isProcessing, priorityCounter.queue, priorityCounter.isProcessing]);
+
+  const processNextCustomer = useCallback((counterType, setCounter) => {
+    setCounter(prev => {
+      if (prev.isProcessing || prev.queue.length === 0) return prev;
+
+      const [nextCustomer, ...remainingQueue] = prev.queue;
+
+      setTimeout(() => {
+        setCounter(current => {
+          const updated = {
+            ...current,
+            currentCustomer: null,
+            isProcessing: false
+          };
+
+         if (counterType === 'priority') {
+          const hasPriorityInQueue = updated.queue.some(c => c.type === "Priority Customer");
+          const finishedWasPriority = current.currentCustomer?.type === "Priority Customer";
+
+          if (finishedWasPriority && !hasPriorityInQueue) {
+            setTimeout(() => {
+              rebalanceQueues(); 
+            }, 100);
+          }
         }
 
-        return updated;
-      });
-    }, SERVICE_TIME);
 
-    return {
-      queue: remainingQueue,
-      currentCustomer: nextCustomer,
-      isProcessing: true
-    };
-  });
-}, []);
+          return updated;
+        });
+      }, SERVICE_TIME);
 
+      return {
+        queue: remainingQueue,
+        currentCustomer: nextCustomer,
+        isProcessing: true
+      };
+    });
+  }, [rebalanceQueues]);
 
   useEffect(() => {
     processNextCustomer('counter1', setCounter1);
-  }, [counter1.queue.length, counter1.isProcessing]);
+  }, [counter1.queue.length, counter1.isProcessing, processNextCustomer]);
 
   useEffect(() => {
     processNextCustomer('counter2', setCounter2);
-  }, [counter2.queue.length, counter2.isProcessing]);
+  }, [counter2.queue.length, counter2.isProcessing, processNextCustomer]);
 
   useEffect(() => {
     processNextCustomer('priority', setPriorityCounter);
-  }, [priorityCounter.queue.length, priorityCounter.isProcessing]);
+  }, [priorityCounter.queue.length, priorityCounter.isProcessing, processNextCustomer]);
 
-  const rebalanceQueues = useCallback(() => {
-    setCounter1(prev1 => {
-      setCounter2(prev2 => {
-        const total1 = prev1.queue.length + (prev1.isProcessing ? 1 : 0);
-        const total2 = prev2.queue.length + (prev2.isProcessing ? 1 : 0);
-        
-        if (Math.abs(total1 - total2) > 1) {
-          const allRegularCustomers = [
-            ...prev1.queue.filter(c => c.type === "Regular Customer"),
-            ...prev2.queue.filter(c => c.type === "Regular Customer")
-          ];
-          
-          if (allRegularCustomers.length > 0) {
-            const mid = Math.ceil(allRegularCustomers.length / 2);
-            const queue1Regular = allRegularCustomers.slice(0, mid);
-            const queue2Regular = allRegularCustomers.slice(mid);
-            
-            const queue1Priority = prev1.queue.filter(c => c.type === "Priority Customer");
-            const queue2Priority = prev2.queue.filter(c => c.type === "Priority Customer");
-            
-            setCounter1(current => ({
-              ...current,
-              queue: [...queue1Priority, ...queue1Regular]
-            }));
-            
-            return {
-              ...prev2,
-              queue: [...queue2Priority, ...queue2Regular]
-            };
-          }
-        }
-        
-        return prev2;
-      });
-      return prev1;
-    });
+  useEffect(() => {
+    const checkPriorityCounter = () => {
+      const hasPriorityCustomers = priorityCounter.queue.some(c => c.type === "Priority Customer") || 
+                                   priorityCounter.currentCustomer?.type === "Priority Customer";
+
+      if (!hasPriorityCustomers && !priorityCounter.isProcessing) {
+        rebalanceQueues();
+      }
+    };
+
+    const interval = setInterval(checkPriorityCounter, 500);
+    return () => clearInterval(interval);
+  }, [priorityCounter.queue, priorityCounter.currentCustomer, priorityCounter.isProcessing, rebalanceQueues]);
+
+  const deleteCustomerFromQueue = useCallback((customerId, queueType) => {
+    switch (queueType) {
+      case 'counter1':
+        setCounter1(prev => ({
+          ...prev,
+          queue: prev.queue.filter(customer => customer.id !== customerId)
+        }));
+        break;
+      case 'counter2':
+        setCounter2(prev => ({
+          ...prev,
+          queue: prev.queue.filter(customer => customer.id !== customerId)
+        }));
+        break;
+      case 'priority':
+        setPriorityCounter(prev => ({
+          ...prev,
+          queue: prev.queue.filter(customer => customer.id !== customerId)
+        }));
+        break;
+      default:
+        console.warn('Invalid queue type');
+    }
   }, []);
 
 function generateCustomer() {
@@ -127,7 +244,67 @@ function generateCustomer() {
   setWaitingList(prev => [...prev, customer]);
 }
 
+function callCustomer() {
+  if (waitingList.length === 0) return;
 
+  const [nextCustomer, ...rest] = waitingList;
+
+  if (nextCustomer.type === "Priority Customer") {
+    setPriorityCounter(prev => ({
+      ...prev,
+      queue: [...prev.queue, nextCustomer]
+    }));
+    setWaitingList(rest);
+    return;
+  }
+
+  const hasPriorityInPriorityQueue =
+    priorityCounter.queue.some(c => c.type === "Priority Customer") ||
+    priorityCounter.currentCustomer?.type === "Priority Customer";
+
+  if (!hasPriorityInPriorityQueue) {
+    const counter1Load = counter1.queue.length + (counter1.isProcessing ? 1 : 0);
+    const counter2Load = counter2.queue.length + (counter2.isProcessing ? 1 : 0);
+    const priorityLoad = priorityCounter.queue.length + (priorityCounter.isProcessing ? 1 : 0);
+
+    const minLoad = Math.min(counter1Load, counter2Load, priorityLoad);
+
+    if (minLoad === priorityLoad) {
+      setPriorityCounter(prev => ({
+        ...prev,
+        queue: [...prev.queue, nextCustomer]
+      }));
+    } else if (minLoad === counter1Load) {
+      setCounter1(prev => ({
+        ...prev,
+        queue: [...prev.queue, nextCustomer]
+      }));
+    } else {
+      setCounter2(prev => ({
+        ...prev,
+        queue: [...prev.queue, nextCustomer]
+      }));
+    }
+  } else {
+    const counter1Load = counter1.queue.length + (counter1.isProcessing ? 1 : 0);
+    const counter2Load = counter2.queue.length + (counter2.isProcessing ? 1 : 0);
+
+    if (counter1Load <= counter2Load) {
+      setCounter1(prev => ({
+        ...prev,
+        queue: [...prev.queue, nextCustomer]
+      }));
+    } else {
+      setCounter2(prev => ({
+        ...prev,
+        queue: [...prev.queue, nextCustomer]
+      }));
+    }
+  }
+
+  setWaitingList(rest);
+  setTimeout(rebalanceQueues, 100);
+}
 
   function assignAllCustomers() {
     if (waitingList.length === 0) return;
@@ -178,12 +355,12 @@ function generateCustomer() {
     setTimeout(rebalanceQueues, 100);
   }
 
-  function deleteQueue() {
-    setWaitingList([]);
-    setCounter1({ queue: [], currentCustomer: null, isProcessing: false });
-    setCounter2({ queue: [], currentCustomer: null, isProcessing: false });
-    setPriorityCounter({ queue: [], currentCustomer: null, isProcessing: false });
-  }
+  // function deleteQueue() {
+  //   setWaitingList([]);
+  //   setCounter1({ queue: [], currentCustomer: null, isProcessing: false });
+  //   setCounter2({ queue: [], currentCustomer: null, isProcessing: false });
+  //   setPriorityCounter({ queue: [], currentCustomer: null, isProcessing: false });
+  // }
 
   const buttonStyle = {
     width: "200px",
@@ -198,7 +375,19 @@ function generateCustomer() {
     transition: "background-color 0.2s ease",
   };
 
-const renderQueue = (queue, currentCustomer) => (
+  const deleteButtonStyle = {
+    backgroundColor: "#C83F12",
+    color: "#fff",
+    border: "none",
+    padding: "2px 6px",
+    borderRadius: "3px",
+    cursor: "pointer",
+    fontSize: "0.7rem",
+    marginLeft: "8px",
+    transition: "background-color 0.2s ease",
+  };
+
+const renderQueue = (queue, currentCustomer, queueType) => (
   <ul style={{ margin: 0, padding: 0 }}>
     {currentCustomer && (
       <li
@@ -209,10 +398,14 @@ const renderQueue = (queue, currentCustomer) => (
           backgroundColor: currentCustomer.type === "Priority Customer" ? "#FFE066" : "#FFF7CC",
           borderRadius: "3px",
           color: "#8A0000",
-          fontWeight: "bold"
+          fontWeight: "bold",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
         }}
       >
-        {currentCustomer.type} #{currentCustomer.id}
+        <span>{currentCustomer.type} #{currentCustomer.id}</span>
+        <span style={{ fontSize: "0.8rem", fontStyle: "italic" }}>Serving</span>
       </li>
     )}
     {queue.map((customer) => (
@@ -224,10 +417,22 @@ const renderQueue = (queue, currentCustomer) => (
           padding: "5px",
           backgroundColor: customer.type === "Priority Customer" ? "#FFE066" : "#FFF7CC",
           borderRadius: "3px",
-          color: "#8A0000"
+          color: "#8A0000",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
         }}
       >
-        {customer.type} #{customer.id}
+        <span>{customer.type} #{customer.id}</span>
+        <button
+          onClick={() => deleteCustomerFromQueue(customer.id, queueType)}
+          style={deleteButtonStyle}
+          onMouseOver={(e) => e.target.style.backgroundColor = "#A62F0A"}
+          onMouseOut={(e) => e.target.style.backgroundColor = "#C83F12"}
+          title="Remove customer from queue"
+        >
+          ×
+        </button>
       </li>
     ))}
     {!currentCustomer && queue.length === 0 && (
@@ -237,8 +442,6 @@ const renderQueue = (queue, currentCustomer) => (
     )}
   </ul>
 );
-
-
 
   return (
     <div style={{
@@ -302,16 +505,16 @@ const renderQueue = (queue, currentCustomer) => (
             gap: "20px",
           }}>
             <Card
-              title={`Counter 1 Queue (${counter1.queue.length + (counter1.isProcessing ? 1 : 0)})`}
-              content={renderQueue(counter1.queue, counter1.currentCustomer)}
+              title={`Counter 1 (${counter1.queue.length + (counter1.isProcessing ? 1 : 0)})`}
+              content={renderQueue(counter1.queue, counter1.currentCustomer, 'counter1')}
             />
             <Card
-              title={`Counter 2 Queue (${counter2.queue.length + (counter2.isProcessing ? 1 : 0)})`}
-              content={renderQueue(counter2.queue, counter2.currentCustomer)}
+              title={`Counter 2 (${counter2.queue.length + (counter2.isProcessing ? 1 : 0)})`}
+              content={renderQueue(counter2.queue, counter2.currentCustomer, 'counter2')}
             />
             <Card
-              title={`Priority Queue (${priorityCounter.queue.length + (priorityCounter.isProcessing ? 1 : 0)})`}
-              content={renderQueue(priorityCounter.queue, priorityCounter.currentCustomer)}
+              title={`Priority (${priorityCounter.queue.length + (priorityCounter.isProcessing ? 1 : 0)})`}
+              content={renderQueue(priorityCounter.queue, priorityCounter.currentCustomer, 'priority')}
             />
           </div>
         </div>
@@ -368,6 +571,14 @@ const renderQueue = (queue, currentCustomer) => (
             >
               Add Customer
             </button>
+            <button
+            onClick={callCustomer}
+              style={buttonStyle}
+              onMouseOver={(e) => e.target.style.backgroundColor  = "#FFE066"}
+              onMouseOut ={(e) => e.target.style.backgroundColor = "#FFF287"}
+            >
+            Assign Customer  
+            </button>
             <button 
               onClick={assignAllCustomers} 
               style={buttonStyle}
@@ -376,7 +587,7 @@ const renderQueue = (queue, currentCustomer) => (
             >
               Assign All Customers
             </button>
-            <button
+            {/* <button
               onClick={deleteQueue}
               style={{
                 ...buttonStyle,
@@ -387,7 +598,7 @@ const renderQueue = (queue, currentCustomer) => (
               onMouseOut={(e) => e.target.style.backgroundColor = "#C83F12"}
             >
               Delete Queue
-            </button>
+            </button> */}
           </div>
         </div>
       </div>
