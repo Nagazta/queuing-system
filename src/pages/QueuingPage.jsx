@@ -167,7 +167,7 @@ const QueuingPage = () => {
     processNextCustomer('counter1', setCounter1);
   }, [counter1.queue.length, counter1.isProcessing, processNextCustomer]);
 
-  useEffect(() => {
+  useEffect(() => { 
     processNextCustomer('counter2', setCounter2);
   }, [counter2.queue.length, counter2.isProcessing, processNextCustomer]);
 
@@ -306,7 +306,7 @@ function callCustomer() {
   setTimeout(rebalanceQueues, 100);
 }
 
-  function assignAllCustomers() {
+function assignAllCustomers() {
     if (waitingList.length === 0) return;
     
     const priorityCustomers = waitingList.filter(c => c.type === "Priority Customer");
@@ -362,30 +362,6 @@ function callCustomer() {
   //   setPriorityCounter({ queue: [], currentCustomer: null, isProcessing: false });
   // }
 
-  const buttonStyle = {
-    width: "200px",
-    backgroundColor: "#FFF287",
-    color: "#8A0000",
-    border: "none",
-    padding: "10px 20px",
-    borderRadius: "5px",
-    cursor: "pointer",
-    fontSize: "1rem",
-    marginRight: "20px",
-    transition: "background-color 0.2s ease",
-  };
-
-  const deleteButtonStyle = {
-    backgroundColor: "#C83F12",
-    color: "#fff",
-    border: "none",
-    padding: "2px 6px",
-    borderRadius: "3px",
-    cursor: "pointer",
-    fontSize: "0.7rem",
-    marginLeft: "8px",
-    transition: "background-color 0.2s ease",
-  };
 
 const renderQueue = (queue, currentCustomer, queueType) => (
   <ul style={{ margin: 0, padding: 0 }}>
@@ -442,6 +418,31 @@ const renderQueue = (queue, currentCustomer, queueType) => (
     )}
   </ul>
 );
+const buttonStyle = {
+    width: "200px",
+    backgroundColor: "#FFF287",
+    color: "#8A0000",
+    border: "none",
+    padding: "10px 20px",
+    borderRadius: "5px",
+    cursor: "pointer",
+    fontSize: "1rem",
+    marginRight: "20px",
+    transition: "background-color 0.2s ease",
+  };
+
+  const deleteButtonStyle = {
+    backgroundColor: "#C83F12",
+    color: "#fff",
+    border: "none",
+    padding: "2px 6px",
+    borderRadius: "3px",
+    cursor: "pointer",
+    fontSize: "0.7rem",
+    marginLeft: "8px",
+    transition: "background-color 0.2s ease",
+  };
+
 
   return (
     <div style={{
