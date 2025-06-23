@@ -14,31 +14,38 @@ const QueuingPage = () => {
 
   const SERVICE_TIME = 10000; 
 
-  const processNextCustomer = useCallback((counterType, setCounter) => {
-    setCounter(prev => {
-      if (prev.isProcessing || prev.queue.length === 0) return prev;
-      
-      const [nextCustomer, ...remainingQueue] = prev.queue;
-      
-      setTimeout(() => {
-        setCounter(current => ({
+const processNextCustomer = useCallback((counterType, setCounter) => {
+  setCounter(prev => {
+    if (prev.isProcessing || prev.queue.length === 0) return prev;
+
+    const [nextCustomer, ...remainingQueue] = prev.queue;
+
+    setTimeout(() => {
+      setCounter(current => {
+        const updated = {
           ...current,
           currentCustomer: null,
           isProcessing: false
-        }));
-        
-        setTimeout(() => {
-          rebalanceQueues();
-        }, 100);
-      }, SERVICE_TIME);
-      
-      return {
-        queue: remainingQueue,
-        currentCustomer: nextCustomer,
-        isProcessing: true
-      };
-    });
-  }, []);
+        };
+
+        if (counterType === 'priority' && updated.queue.length === 0) {
+          setTimeout(() => {
+            rebalanceQueues();
+          }, 100);
+        }
+
+        return updated;
+      });
+    }, SERVICE_TIME);
+
+    return {
+      queue: remainingQueue,
+      currentCustomer: nextCustomer,
+      isProcessing: true
+    };
+  });
+}, []);
+
 
   useEffect(() => {
     processNextCustomer('counter1', setCounter1);
@@ -90,13 +97,36 @@ const QueuingPage = () => {
     });
   }, []);
 
- function generateCustomer() {
+function generateCustomer() {
   const probability = Math.random(); 
   const randomType = probability < 0.1 ? "Priority Customer" : "Regular Customer"; 
-  const id = Math.floor(Math.random() * 100) + 100; 
+
+  const usedIds = new Set([
+    ...waitingList.map(c => c.id),
+    ...counter1.queue.map(c => c.id),
+    ...counter2.queue.map(c => c.id),
+    ...priorityCounter.queue.map(c => c.id),
+    counter1.currentCustomer?.id,
+    counter2.currentCustomer?.id,
+    priorityCounter.currentCustomer?.id
+  ].filter(Boolean)); 
+
+  let id;
+  let attempts = 0;
+  do {
+    id = Math.floor(Math.random() * 100) + 100;
+    attempts++;
+  } while (usedIds.has(id) && attempts < 1000);
+
+  if (usedIds.has(id)) {
+    console.warn("Unable to generate unique ID after many attempts.");
+    return;
+  }
+
   const customer = { type: randomType, id, timestamp: Date.now() };
   setWaitingList(prev => [...prev, customer]);
 }
+
 
 
   function assignAllCustomers() {
